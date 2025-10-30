@@ -1,33 +1,76 @@
-# 🧠 Gesture Control System — Changelog
+# 🧠 Gesture Mouse Controller
 
-Registro de mudanças e melhorias do sistema de controle por gestos.
-
----
-
-## [0.2] - 2025-10-30  
-### 🚀 Novidades
-- Implementado sistema de **arrastar janelas suavemente** usando gestos detectados por câmera.  
-- Adicionada **detecção contínua de gestos** com maior estabilidade e fluidez.  
-- Otimização do reconhecimento de movimentos com **ajuste dinâmico de sensibilidade**.  
-- Adicionada função para **abrir tarefas e interagir com múltiplos monitores**.  
-- Reestruturação do código para facilitar futuras implementações.
-
-### 🧩 Melhorias
-- Melhoria significativa na **precisão da detecção de gestos**.  
-- Redução de travamentos ocasionais ao alternar janelas.  
-- Código refatorado para melhor legibilidade e manutenção.  
+Sistema experimental para **controlar o computador usando apenas gestos**, sem necessidade de mouse físico.  
+Desenvolvido em **Python** com **OpenCV**, o projeto reconhece movimentos de mão via câmera e os traduz em ações do sistema.
 
 ---
 
-## [0.1] - 2025-10-29  
-### ✨ Versão inicial
-- Primeira versão funcional do sistema de **reconhecimento de gestos via câmera**.  
-- Controle básico do cursor e janelas com gestos manuais.  
-- Estrutura de detecção inicial utilizando **OpenCV**.  
+## 🚀 Funcionalidades
+
+- 🎥 Detecção em tempo real via webcam.  
+- 🖱️ Controle suave do cursor e cliques simulados.  
+- ⚙️ Ajuste de sensibilidade para melhor precisão.  
+- 💡 Base para futuras expansões (como mover janelas e multitela).  
 
 ---
 
-📌 **Próximos passos (planejados para 0.3)**  
-- Implementar gesto para **mover janelas entre múltiplos monitores**.  
-- Adicionar interface de configuração para calibrar sensibilidade e zonas de gesto.  
-- Criar módulo de logging e monitoramento de uso.  
+## 🧩 Estrutura atual
+
+```
+GESTURE-MOUSE-CONTROLLER/
+│
+├── main.py         # Código principal do sistema (loop de detecção)
+├── TESTE.py        # Arquivo de testes e experimentos
+├── CHANGELOG.md    # Histórico de versões
+├── README.md       # Documentação do projeto
+└── .gitignore      # Arquivos a serem ignorados pelo Git
+```
+
+---
+
+## ⚡ Como executar
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/seuusuario/GESTURE-MOUSE-CONTROLLER.git
+   cd GESTURE-MOUSE-CONTROLLER
+   ```
+
+2. Instale as dependências:
+   ```bash
+   pip install opencv-python pyautogui
+   ```
+
+3. Execute o programa principal:
+   ```bash
+   python main.py
+   ```
+
+---
+
+## 🧪 Versões
+
+| Versão | Data | Alterações principais |
+|--------|------|-----------------------|
+| 0.1 | 29/10/2025 | Primeira versão funcional |
+| 0.2 | 30/10/2025 | Movimento suave e melhor precisão |
+
+---
+
+## 🧭 Próximos passos
+
+- Adicionar **gesto para mover janelas entre monitores**.  
+- Implementar **interface de calibração**.  
+- Criar **módulo de logging** e métricas de uso.  
+
+---
+
+## 📄 Licença
+
+Projeto de código aberto para estudo e experimentação.  
+Feito com 🧠 por **Gabriel Araújo**.
+
+---
+
+> 💡 *“Caro eu do futuro: se você está aqui, é porque temos problemas.  
+> Felizmente, deixei algo pronto para ajudar.”*
