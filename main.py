@@ -4,12 +4,13 @@ import pyautogui
 import time
 from collections import deque
 import pygetwindow as gw
+import win32gui
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
-from mediapipe import Image, ImageFormat
+from mediapipe import Image, ImageFormat, solutions
 
 # === CONFIGURAÇÕES ===
-DEBUG = False
+DEBUG = True
 SMOOTHING_FRAMES = 5
 CLICK_DIST = 25
 RELEASE_DIST = 40
@@ -39,7 +40,7 @@ if not cap.isOpened():
 
 print("✅ Webcam conectada com sucesso!")
 print("🖐️ Use o dedo indicador para mover o mouse.")
-print("🤏 Junte polegar e indicador para arrastar janelas.")
+print("🤏 Junte polegar e indicador para arrastar janelas sob o cursor.")
 print("❎ Pressione ESC para sair.\n")
 
 # === FUNÇÕES AUXILIARES ===
@@ -51,15 +52,21 @@ posicoes_y = deque(maxlen=SMOOTHING_FRAMES)
 
 clicando = False
 ultima_pos = None
-janela_ativa = None
 ultimo_movimento = time.time()
 
-def mover_janela_ativa(dx, dy):
-    """Move a janela atualmente ativa pelo deslocamento (dx, dy)."""
+def mover_janela_cursor(dx, dy):
+    """Move a janela que está sob o cursor do mouse."""
     try:
-        janela = gw.getActiveWindow()
-        if janela:
-            janela.move(janela.left + dx, janela.top + dy)
+        hwnd = win32gui.WindowFromPoint(pyautogui.position())
+        rect = win32gui.GetWindowRect(hwnd)
+        win32gui.MoveWindow(
+            hwnd,
+            rect[0] + int(dx),
+            rect[1] + int(dy),
+            rect[2] - rect[0],
+            rect[3] - rect[1],
+            True
+        )
     except Exception:
         pass
 
@@ -80,13 +87,18 @@ while True:
         ultimo_movimento = frame_time
 
         for hand_landmarks in result.hand_landmarks:
-            # Pontos dos dedos (normalizados 0–1 → pixels)
-            x1, y1 = int(hand_landmarks[8].x * w), int(hand_landmarks[8].y * h)  # Indicador
-            x2, y2 = int(hand_landmarks[4].x * w), int(hand_landmarks[4].y * h)  # Polegar
+            # Pontos normalizados → pixels
+            pontos = []
+            for lm in hand_landmarks:
+                cx, cy = int(lm.x * w), int(lm.y * h)
+                pontos.append((cx, cy))
 
+            # Índice e polegar
+            x1, y1 = pontos[8]   # Indicador
+            x2, y2 = pontos[4]   # Polegar
             dist = distancia((x1, y1), (x2, y2))
 
-            # Conversão para coordenadas de tela
+            # Conversão para tela
             mouse_x = np.interp(x1, (0, w), (0, screen_w))
             mouse_y = np.interp(y1, (0, h), (0, screen_h))
 
@@ -96,39 +108,42 @@ while True:
             avg_x = np.mean(posicoes_x)
             avg_y = np.mean(posicoes_y)
 
+            # === Desenhar a mão ===
             if DEBUG:
-                cv2.putText(frame, f"Dist: {dist:.1f}", (10, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                # Desenhar conexões da mão
+                for connection in solutions.hands.HAND_CONNECTIONS:
+                    start = pontos[connection[0]]
+                    end = pontos[connection[1]]
+                    cv2.line(frame, start, end, (0, 255, 255), 2)
+
+                # Desenhar pontos
+                for (cx, cy) in pontos:
+                    cv2.circle(frame, (cx, cy), 4, (0, 255, 0), -1)
+
+                cv2.putText(frame, f"Dist: {dist:.1f}", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
 
             # === GESTOS ===
-
-            # 🤏 Juntou os dedos → iniciar arrasto de janela
             if dist < CLICK_DIST and not clicando:
                 clicando = True
-                janela_ativa = gw.getActiveWindow()
                 ultima_pos = (avg_x, avg_y)
                 cv2.putText(frame, "🟢 SEGURANDO JANELA", (x1 - 70, y1 - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-            # Mantém arrastando enquanto os dedos estiverem juntos
             elif clicando and dist < RELEASE_DIST:
-                if ultima_pos and janela_ativa:
+                if ultima_pos:
                     dx = avg_x - ultima_pos[0]
                     dy = avg_y - ultima_pos[1]
-                    mover_janela_ativa(int(dx), int(dy))
+                    mover_janela_cursor(dx, dy)
                     ultima_pos = (avg_x, avg_y)
 
-            # 🖐️ Separou os dedos → soltar janela
             elif dist > RELEASE_DIST and clicando:
                 clicando = False
-                janela_ativa = None
 
-            # 🖱️ Se não está clicando, apenas mover o cursor
             if not clicando:
                 pyautogui.moveTo(avg_x, avg_y, duration=MOVE_DURATION)
 
     else:
-        # Nenhuma mão detectada
         if frame_time - ultimo_movimento > INACTIVITY_TIMEOUT:
             cv2.putText(frame, "⏸️ Mão não detectada - pausado", (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
@@ -136,7 +151,7 @@ while True:
             cv2.putText(frame, "🔍 Procurando mão...", (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
 
-    cv2.imshow("🖐️ Gesture Window Controller", frame)
+    cv2.imshow("🖐️ Gesture Window Mover", frame)
 
     if cv2.waitKey(1) & 0xFF == 27:
         print("\n👋 Encerrando programa...")
