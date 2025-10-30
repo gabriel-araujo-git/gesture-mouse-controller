@@ -12,9 +12,9 @@ DEBUG = False
 SMOOTHING_FRAMES = 5
 CLICK_DIST = 25
 RELEASE_DIST = 40
-MOVE_DURATION = 0.01       # 🔥 Movimento mais rápido
+MOVE_DURATION = 0      # 🔥 Movimento mais rápido
 INACTIVITY_TIMEOUT = 10
-SENSITIVITY = 3.0         # 🧭 Fator de velocidade do cursor (1.0 = normal)
+SENSITIVITY = 1.4           # 🧭 Fator de velocidade do cursor (1.0 = normal)
 
 # === INICIALIZAÇÕES ===
 model_path = "hand_landmarker.task"
