@@ -1,108 +1,143 @@
 import cv2
-import mediapipe as mp
-import pyautogui
 import numpy as np
+import pyautogui
 import time
 from collections import deque
+import pygetwindow as gw
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
+from mediapipe import Image, ImageFormat
 
 # === CONFIGURAÇÕES ===
-DEBUG = False              # Mostra logs extras
-MAX_HANDS = 1
-SMOOTHING_FRAMES = 5       # Média móvel da posição do mouse
-CLICK_DIST = 25            # Distância para "clicar"
-RELEASE_DIST = 40          # Distância para "soltar"
-MOVE_DURATION = 0.03       # Suavidade no movimento
-INACTIVITY_TIMEOUT = 10    # Segundos antes de parar captura por inatividade
+DEBUG = False
+SMOOTHING_FRAMES = 5
+CLICK_DIST = 25
+RELEASE_DIST = 40
+MOVE_DURATION = 0.03
+INACTIVITY_TIMEOUT = 10
 
 # === INICIALIZAÇÕES ===
-mp_hands = mp.solutions.hands
-mp_draw = mp.solutions.drawing_utils
-hands = mp_hands.Hands(max_num_hands=MAX_HANDS, min_detection_confidence=0.6)
-screen_w, screen_h = pyautogui.size()
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+model_path = "hand_landmarker.task"
 
+BaseOptions = python.BaseOptions
+VisionRunningMode = vision.RunningMode
+HandLandmarker = vision.HandLandmarker
+HandLandmarkerOptions = vision.HandLandmarkerOptions
+
+options = HandLandmarkerOptions(
+    base_options=BaseOptions(model_asset_path=model_path),
+    running_mode=VisionRunningMode.IMAGE,
+    num_hands=1
+)
+detector = HandLandmarker.create_from_options(options)
+
+screen_w, screen_h = pyautogui.size()
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("❌ Erro: não foi possível acessar a webcam.")
     exit()
 
 print("✅ Webcam conectada com sucesso!")
 print("🖐️ Use o dedo indicador para mover o mouse.")
-print("🤏 Junte polegar e indicador para clicar/arrastar.")
-print("⏳ O programa pausa após inatividade.")
+print("🤏 Junte polegar e indicador para arrastar janelas.")
 print("❎ Pressione ESC para sair.\n")
 
 # === FUNÇÕES AUXILIARES ===
 def distancia(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
-# Fila para suavização do movimento
 posicoes_x = deque(maxlen=SMOOTHING_FRAMES)
 posicoes_y = deque(maxlen=SMOOTHING_FRAMES)
 
 clicando = False
+ultima_pos = None
+janela_ativa = None
 ultimo_movimento = time.time()
 
+def mover_janela_ativa(dx, dy):
+    """Move a janela atualmente ativa pelo deslocamento (dx, dy)."""
+    try:
+        janela = gw.getActiveWindow()
+        if janela:
+            janela.move(janela.left + dx, janela.top + dy)
+    except Exception:
+        pass
+
+# === LOOP PRINCIPAL ===
 while True:
-    success, img = cap.read()
-    if not success:
-        print("⚠️ Frame não capturado, tentando novamente...")
+    ret, frame = cap.read()
+    if not ret:
         continue
 
-    img = cv2.flip(img, 1)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    result = hands.process(img_rgb)
-    h, w, _ = img.shape
+    frame = cv2.flip(frame, 1)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_image = Image(image_format=ImageFormat.SRGB, data=rgb)
+    result = detector.detect(mp_image)
+    h, w, _ = frame.shape
     frame_time = time.time()
 
-    if result.multi_hand_landmarks:
-        ultimo_movimento = frame_time  # reset timeout
-        for hand_landmarks in result.multi_hand_landmarks:
-            mp_draw.draw_landmarks(img, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-            landmarks = hand_landmarks.landmark
+    if result.hand_landmarks:
+        ultimo_movimento = frame_time
 
-            x1, y1 = int(landmarks[8].x * w), int(landmarks[8].y * h)
-            x2, y2 = int(landmarks[4].x * w), int(landmarks[4].y * h)
+        for hand_landmarks in result.hand_landmarks:
+            # Pontos dos dedos (normalizados 0–1 → pixels)
+            x1, y1 = int(hand_landmarks[8].x * w), int(hand_landmarks[8].y * h)  # Indicador
+            x2, y2 = int(hand_landmarks[4].x * w), int(hand_landmarks[4].y * h)  # Polegar
+
             dist = distancia((x1, y1), (x2, y2))
 
             # Conversão para coordenadas de tela
             mouse_x = np.interp(x1, (0, w), (0, screen_w))
             mouse_y = np.interp(y1, (0, h), (0, screen_h))
 
-            # Suavização de movimento
+            # Suavização
             posicoes_x.append(mouse_x)
             posicoes_y.append(mouse_y)
             avg_x = np.mean(posicoes_x)
             avg_y = np.mean(posicoes_y)
 
-            pyautogui.moveTo(avg_x, avg_y, duration=MOVE_DURATION)
-
             if DEBUG:
-                cv2.putText(img, f"Dist: {dist:.1f}", (10, 40),
+                cv2.putText(frame, f"Dist: {dist:.1f}", (10, 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
 
-            # Lógica de clique
+            # === GESTOS ===
+
+            # 🤏 Juntou os dedos → iniciar arrasto de janela
             if dist < CLICK_DIST and not clicando:
                 clicando = True
-                pyautogui.mouseDown()
-                cv2.putText(img, "🟢 CLICANDO", (x1 - 50, y1 - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                janela_ativa = gw.getActiveWindow()
+                ultima_pos = (avg_x, avg_y)
+                cv2.putText(frame, "🟢 SEGURANDO JANELA", (x1 - 70, y1 - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
+            # Mantém arrastando enquanto os dedos estiverem juntos
+            elif clicando and dist < RELEASE_DIST:
+                if ultima_pos and janela_ativa:
+                    dx = avg_x - ultima_pos[0]
+                    dy = avg_y - ultima_pos[1]
+                    mover_janela_ativa(int(dx), int(dy))
+                    ultima_pos = (avg_x, avg_y)
+
+            # 🖐️ Separou os dedos → soltar janela
             elif dist > RELEASE_DIST and clicando:
                 clicando = False
-                pyautogui.mouseUp()
+                janela_ativa = None
+
+            # 🖱️ Se não está clicando, apenas mover o cursor
+            if not clicando:
+                pyautogui.moveTo(avg_x, avg_y, duration=MOVE_DURATION)
 
     else:
-        # Timeout de inatividade
+        # Nenhuma mão detectada
         if frame_time - ultimo_movimento > INACTIVITY_TIMEOUT:
-            cv2.putText(img, "⏸️ Mão não detectada - pausado", (30, 50),
+            cv2.putText(frame, "⏸️ Mão não detectada - pausado", (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
         else:
-            cv2.putText(img, "🔍 Procurando mão...", (30, 50),
+            cv2.putText(frame, "🔍 Procurando mão...", (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
 
-    cv2.imshow("🖐️ Gesture Mouse Controller", img)
+    cv2.imshow("🖐️ Gesture Window Controller", frame)
 
-    # Sai com ESC
     if cv2.waitKey(1) & 0xFF == 27:
         print("\n👋 Encerrando programa...")
         break
