@@ -1,5 +1,6 @@
 import flet as ft
 import speech_recognition as sr
+from commands import run_command
 
 def main(page: ft.Page):
     page.title = "Clap Assistant Pro"
@@ -7,18 +8,18 @@ def main(page: ft.Page):
     page.window_width = 500
     page.window_height = 600
 
-    output = ft.Text("", size=18)
-    command_box = ft.TextField(label="Digite um comando...", width=400, autofocus=True)
+    output = ft.Text("👋 Pronto para receber comandos.")
+    command_box = ft.TextField(label="Digite um comando (ex: abrir vscode)", width=400, autofocus=True)
 
-    def process_command(cmd):
-        output.value = f"🧠 Executando: {cmd}"
+    def execute_command(cmd):
+        response = run_command(cmd)
+        output.value = response
         page.update()
-        # Aqui entra sua lógica real (abrir app, tocar som, etc.)
 
     def handle_text_command(e):
         cmd = command_box.value.strip()
         if cmd:
-            process_command(cmd)
+            execute_command(cmd)
             command_box.value = ""
             page.update()
 
@@ -32,7 +33,7 @@ def main(page: ft.Page):
             cmd = recognizer.recognize_google(audio, language="pt-BR")
             output.value = f"🎧 Você disse: {cmd}"
             page.update()
-            process_command(cmd)
+            execute_command(cmd)
         except Exception as err:
             output.value = f"❌ Erro: {err}"
             page.update()
@@ -40,13 +41,14 @@ def main(page: ft.Page):
     page.add(
         ft.Column(
             [
-                ft.Text("🧩 Clap Assistant Pro", size=24, weight="bold"),
+                ft.Text("🤖 Clap Assistant Pro", size=24, weight="bold"),
                 command_box,
                 ft.Row(
                     [
                         ft.ElevatedButton("Enviar", on_click=handle_text_command),
                         ft.ElevatedButton("🎤 Falar", on_click=handle_voice_command),
-                    ]
+                    ],
+                    alignment=ft.MainAxisAlignment.CENTER,
                 ),
                 ft.Divider(),
                 output,
