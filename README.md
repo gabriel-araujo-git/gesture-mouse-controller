@@ -1,21 +1,31 @@
-# 🧠 Gesture Mouse Controller
+# Gesture Mouse Controller
 
-Sistema experimental para **controlar o computador usando apenas gestos**, sem necessidade de mouse físico.  
-Desenvolvido em **Python** com **OpenCV**, o projeto reconhece movimentos de mão via câmera e os traduz em ações do sistema.
-
----
-
-## 🚀 Funcionalidades
-
-- 🎥 Detecção em tempo real via webcam.  
-- 🖱️ Controle suave do cursor e cliques simulados.  
-- ⚙️ Ajuste de sensibilidade para melhor precisão.  
-- 💡 Base para futuras expansões (como mover janelas e multitela).  
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](#)
+[![OpenCV](https://img.shields.io/badge/OpenCV-4.7-blue?logo=opencv&logoColor=white)](#)
+[![PyAutoGUI](https://img.shields.io/badge/PyAutoGUI-0.9.53-lightgrey)](#)
+[![Version](https://img.shields.io/badge/Version-0.2-green)](#)
+[![Status](https://img.shields.io/badge/Status-Experimental-orange)](#)
+[![License](https://img.shields.io/badge/License-OpenSource-lightgrey)](#)
+[![Author](https://img.shields.io/badge/Author-Gabriel_Araujo-blueviolet)](#)
+[![Last Update](https://img.shields.io/badge/Updated-Oct_2025-lightgrey)](#)
 
 ---
 
-## 🧩 Estrutura atual
+## Visão Geral
 
+Sistema experimental para **controlar o computador usando gestos**, sem necessidade de mouse físico.  
+Desenvolvido em **Python** com **OpenCV** e **PyAutoGUI**, o projeto reconhece movimentos de mão via câmera e os traduz em ações do sistema.
+
+---
+
+## Funcionalidades
+
+- Detecção em tempo real via webcam.  
+- Controle de cursor e cliques simulados.  
+- Ajuste de sensibilidade para melhor precisão.  
+- Base para futuras expansões, como movimentação de janelas e gestos personalizados.
+
+---
 ```
 GESTURE-MOUSE-CONTROLLER/
 │
